@@ -1,0 +1,7 @@
+cfg/*.json
+.idea/*
+logs/
+*.pyc
+*.mo
+linter.sh
+linter.log
