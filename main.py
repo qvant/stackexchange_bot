@@ -51,6 +51,13 @@ def set_sites(sites):
             site_list[i] = buf
     connect.commit()
 
+
+def other_bots(update: Update, context: CallbackContext):
+    context.bot.send_message(chat_id=update.effective_chat.id,
+                             text="You can may be interested in my other telegram bots: "
+                                  " https://t.me/idle_rpg_bot - simple ZPG"
+                                  " https://t.me/achievement_hunt_bot - game achievement rarity checker.")
+
 def start(update: Update, context: CallbackContext):
     pass
 
@@ -267,12 +274,14 @@ def main():
     sites_handler = CommandHandler('sites', site_list_handler)
     delete_handler = CommandHandler('del', delete_sub)
     subs_list_handler = CommandHandler('list', subs_list)
+    other_handler = CommandHandler('other', other_bots)
     echo_handler = MessageHandler(Filters.text & (~Filters.command), echo)
     dispatcher.add_handler(start_handler)
     dispatcher.add_handler(add_handler)
     dispatcher.add_handler(sites_handler)
     dispatcher.add_handler(subs_list_handler)
     dispatcher.add_handler(delete_handler)
+    dispatcher.add_handler(other_handler)
     dispatcher.add_handler(echo_handler)
 
     updater.start_polling()
