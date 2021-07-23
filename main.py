@@ -188,7 +188,8 @@ def add(update: Update, context: CallbackContext):
             cur.execute("select id from stackexchange_db.sites where api_site_parameter = %s", (site,))
             buf = cur.fetchone()
             if buf is None:
-                context.bot.send_message(text="Incorrect stackexchange site name: {}".format(site), chat_id=update.effective_chat.id)
+                context.bot.send_message(text="Incorrect stackexchange site name: {}".format(site),
+                                         chat_id=update.effective_chat.id)
                 return
             else:
                 site_list[site] = buf[0]
@@ -247,7 +248,10 @@ def request_sites():
 def clear_tags(list_with_q: List) -> List:
     res = []
     for i in list_with_q:
-        res.append(i[1:len(i) - 1])
+        if i[0] == "'":
+            res.append(i[1:len(i) - 1])
+        else:
+            res.append(i)
     return res
 
 
@@ -312,6 +316,7 @@ def main():
                     main_log.info("Saved new update status for site {}".format(i[4],))
                     connect.commit()
                     continue
+                msg_cnt = 0
                 cur.execute("""update stackexchange_db.site_updates u set update_status_id = 2
                 where u.id = %s""",
                             (i[0],))
@@ -337,6 +342,7 @@ def main():
                 while True:
                     subs = cur.fetchmany(size=1000)
                     main_log.info("Fetched {} subscriptions".format(len(subs)))
+                    queued_msgs = {}
                     for q in questions:
                         sent = False
                         cur_id = None
@@ -358,8 +364,8 @@ def main():
                             for e in tags_not:
                                 if e in q.tags:
                                     main_log.debug(
-                                        "Failed check for question {} with tags {} on exclude tag {} ".format(
-                                                                                                     q.question_id, q.tags, e))
+                                        "Failed check for question {} with tags {} on exclude tag {} "
+                                            .format(q.question_id, q.tags, e))
                                     skip = True
                                     break
                             if skip:
@@ -390,9 +396,32 @@ def main():
                                     break
                             if skip:
                                 continue
-                            dispatcher.bot.send_message(chat_id=s[0], text="Question: {0}, link: {1}".format(q.title, q.link))
+                            if s[0] not in queued_msgs:
+                                queued_msgs[s[0]] = []
+                            queued_msgs[s[0]].append(q)
                             sent = True
                     main_log.info("Proceed {} subscriptions".format(len(subs)))
+                    for usr in queued_msgs:
+                        msg = "!"
+                        for q in queued_msgs[usr]:
+                            buf = "Question: {0}, link: {1}".format(q.title, q.link) + chr(10)
+                            if len(msg) + len(buf) >= 4096:
+                                msg_cnt += 1
+                                dispatcher.bot.send_message(chat_id=usr,
+                                                            text=msg)
+                                msg = buf
+                                if msg_cnt % 30 == 0:
+                                    time.sleep(1)
+                                    main_log.info("Sent {} messages, sleep".format(msg_cnt))
+                            else:
+                                msg += buf
+                        dispatcher.bot.send_message(chat_id=usr,
+                                                    text=msg)
+                        msg_cnt += 1
+                        if msg_cnt % 30 == 0:
+                            time.sleep(1)
+                            main_log.info("Sent {} messages, sleep".format(msg_cnt))
+                    main_log.info("Sent {} messages".format(msg_cnt))
                     if len(subs) < 1000:
                         main_log.info("Proceed all".format())
                         break
@@ -414,6 +443,7 @@ def main():
     updater.stop()
     main_log.info("Job finished.")
     exit(0)
+
 
 if __name__ == "__main__":
     main()
