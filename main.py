@@ -386,7 +386,8 @@ def main():
                     for q in questions:
                         sent = False
                         cur_id = None
-                        if q.question_id < i[0]:
+                        # skip already proceed questions
+                        if q.question_id < i[1]:
                             continue
                         for s in subs:
                             if sent and s[0] == cur_id:
