@@ -20,6 +20,7 @@ WAIT_BETWEEN_TRIES = 3
 global conn
 global site_list
 global handler_log
+global config
 
 
 def set_connect(config: Config):
@@ -58,8 +59,42 @@ def other_bots(update: Update, context: CallbackContext):
                                   " https://t.me/idle_rpg_bot - simple ZPG"
                                   " https://t.me/achievement_hunt_bot - game achievement rarity checker.")
 
+
 def start(update: Update, context: CallbackContext):
-    pass
+    help_response(update, context)
+
+
+def sources(update: Update, context: CallbackContext):
+    msg = "Bot sources available on https://github.com/qvant/stackexchange_bot."
+    context.bot.send_message(text=msg,
+                             chat_id=update.effective_chat.id)
+
+
+def help_response(update: Update, context: CallbackContext):
+    msg = "The bot supports following commands:" + chr(10)
+    msg += "  /add - add subscription for the site from stackexchange network."
+    msg += "  It has parameters:" + chr(10)
+    msg += "    tags(or tags_any) - you will be notified about questions with any ot these tags " + chr(10)
+    msg += "    tags_all - you will be notified about questions which has all these tags list" + chr(10)
+    msg += "    tags_exclude - you wouldn't be notified about questions which has any of these tags" + chr(10)
+    msg += "    site - you will be notified about question from this site. Default value: stackoverflow." + chr(10)
+    msg += "  examples:" + chr(10)
+    msg += "    /add tags=oracle # subscribe for all Oracle related questions from stackoverflow" + chr(10)
+    msg += "    /add site=stackoverflow tags=postgresql # subscribe for all Postgresql related questions " \
+           "from stackoverflow" + chr(10)
+    msg += "    /add site=superuser tags_all=iptables,docker # subscribe for questions from superuser about iptables "\
+           "AND docker" + chr(10)
+    msg += "    /add site=gaming tags=starcraft-2, tags_exclude=starcraft-protoss # subscribe for questions from " \
+           "gaming about starcraft 2, but not about protoss" + chr(10)
+    msg += "/list - show active subscriptions" + chr(10)
+    msg += "/del - delete subscription. Examples:" + chr(10)
+    msg += "  /del 3 - remove third subscription from the list" + chr(10)
+    msg += "  /del all - remove all subscriptions" + chr(10)
+    msg += "/help - this menu" + chr(10)
+    msg += "/sources - link on the bot source code" + chr(10)
+    msg += "/other - link on the other my bots"
+    context.bot.send_message(text=msg,
+                             chat_id=update.effective_chat.id)
 
 
 def site_list_handler(update: Update, context: CallbackContext):
@@ -198,7 +233,7 @@ def add(update: Update, context: CallbackContext):
         """, (update.effective_chat.id, site_list[site], json.dumps(tag_base)))
         connect.commit()
     elif len(site) == 0:
-        context.bot.send_message(text="Emptp site name",
+        context.bot.send_message(text="Empty site name",
                                  chat_id=update.effective_chat.id)
     else:
         context.bot.send_message(text="Empty all tag lists",
@@ -257,6 +292,7 @@ def clear_tags(list_with_q: List) -> List:
 
 def main():
     global handler_log
+    global config
     parser = argparse.ArgumentParser(description='Idle RPG server.')
     parser.add_argument("--config", '-cfg', help="Path to config file", action="store", default="cfg//main.json")
     parser.add_argument("--delay", help="Number seconds app will wait before start", action="store", default=None)
@@ -279,6 +315,8 @@ def main():
     delete_handler = CommandHandler('del', delete_sub)
     subs_list_handler = CommandHandler('list', subs_list)
     other_handler = CommandHandler('other', other_bots)
+    help_handler = CommandHandler('help', help_response)
+    sources_handler = CommandHandler('sources', sources)
     echo_handler = MessageHandler(Filters.text & (~Filters.command), echo)
     dispatcher.add_handler(start_handler)
     dispatcher.add_handler(add_handler)
@@ -286,6 +324,8 @@ def main():
     dispatcher.add_handler(subs_list_handler)
     dispatcher.add_handler(delete_handler)
     dispatcher.add_handler(other_handler)
+    dispatcher.add_handler(help_handler)
+    dispatcher.add_handler(sources_handler)
     dispatcher.add_handler(echo_handler)
 
     updater.start_polling()
@@ -402,7 +442,7 @@ def main():
                             sent = True
                     main_log.info("Proceed {} subscriptions".format(len(subs)))
                     for usr in queued_msgs:
-                        msg = "!"
+                        msg = ""
                         for q in queued_msgs[usr]:
                             buf = "Question: {0}, link: {1}".format(q.title, q.link) + chr(10)
                             if len(msg) + len(buf) >= 4096:
