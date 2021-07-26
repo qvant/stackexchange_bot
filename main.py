@@ -45,7 +45,6 @@ def set_sites(sites):
     global site_list
     connect = get_connect()
     cur = connect.cursor()
-    site_list = {}
     for i in sites:
         if i not in site_list:
             cur.execute("select id from stackexchange_db.sites where api_site_parameter = %s", (i,))
@@ -335,12 +334,15 @@ def main():
     global handler_log
     global config
     global is_running
+    global site_list
     parser = argparse.ArgumentParser(description='Idle RPG server.')
     parser.add_argument("--config", '-cfg', help="Path to config file", action="store", default="cfg//main.json")
     parser.add_argument("--delay", help="Number seconds app will wait before start", action="store", default=None)
     args = parser.parse_args()
     if args.delay is not None:
         time.sleep(int(args.delay))
+
+    site_list = {}
 
     config = Config(args.config)
     main_log = get_logger("main_bot", config.log_level, True)
@@ -378,6 +380,7 @@ def main():
 
     is_running = True
 
+    site_request_date = datetime.datetime.now()
     r = request_sites()
     set_sites(r)
 
@@ -386,6 +389,10 @@ def main():
 
     while is_running:
         try:
+            if site_request_date + datetime.timedelta(hours=24) > datetime.datetime.now():
+                site_request_date = datetime.datetime.now()
+                r = request_sites()
+                set_sites(r)
             connect = get_connect()
             cur = connect.cursor()
             dt_next_update = datetime.datetime.now() + datetime.timedelta(minutes=5)
@@ -524,8 +531,17 @@ def main():
             main_log.info("Sleep...")
             time.sleep(4)
 
+        except psycopg2.Error as err:
+            main_log.exception(err)
+            if config.supress_errors:
+                try:
+                    set_connect(config)
+                except BaseException as err:
+                    main_log.exception(err)
+            else:
+                raise
         except BaseException as err:
-            main_log.critical(err)
+            main_log.exception(err)
             if config.supress_errors:
                 pass
             else:
