@@ -389,7 +389,8 @@ def main():
 
     while is_running:
         try:
-            if site_request_date + datetime.timedelta(hours=24) > datetime.datetime.now():
+            if site_request_date + datetime.timedelta(hours=24) <= datetime.datetime.now():
+                main_log.info("Renew sites")
                 site_request_date = datetime.datetime.now()
                 r = request_sites()
                 set_sites(r)
