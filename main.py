@@ -115,9 +115,10 @@ def site_list_handler(update: Update, context: CallbackContext):
 def subs_list(update: Update, context: CallbackContext):
     connect = get_connect()
     cur = connect.cursor()
-    cur.execute("""select st.api_site_parameter, row_number() over (order by s.id) rn, tags from stackexchange_db.subscriptions s
-     join stackexchange_db.sites st on st.id = s.site_id where s.telegram_id = %s
-                    order by 2 """, (update.effective_chat.id, ))
+    cur.execute("""select st.api_site_parameter, row_number() over (order by s.id) rn, tags
+                        from stackexchange_db.subscriptions s
+                        join stackexchange_db.sites st on st.id = s.site_id where s.telegram_id = %s
+                        order by 2 """, (update.effective_chat.id, ))
     msg = "Active subscriptions: " + chr(10)
     for site, rn, tags in cur:
         msg += "№ {}. Site: {}, tags {}".format(rn, site, tags) + chr(10)
@@ -139,8 +140,10 @@ def admin_stats(update: Update, context: CallbackContext):
         return
     connect = get_connect()
     cur = connect.cursor()
-    cur.execute("""select count(1), st.api_site_parameter from stackexchange_db.subscriptions s join stackexchange_db.sites st
-    on st.id = s.site_id group by st.api_site_parameter""")
+    cur.execute("""select count(1), st.api_site_parameter
+                        from stackexchange_db.subscriptions s
+                        join stackexchange_db.sites st
+                        on st.id = s.site_id group by st.api_site_parameter""")
     msg = ""
     for cnt, nm in cur:
         msg += "site: {}, subs: {}".format(nm, cnt) + chr(10)
@@ -202,7 +205,7 @@ def delete_sub(update: Update, context: CallbackContext):
                         """, (update.effective_chat.id, rn))
         connect.commit()
     handler_log.debug("Subscription for row {} and user deleted".format(cmd, update.effective_chat.id))
-    context.bot.send_message(text="Success",
+    context.bot.send_message(text="Subscription deleted",
                              chat_id=update.effective_chat.id)
 
 
@@ -265,6 +268,8 @@ def add(update: Update, context: CallbackContext):
         insert into stackexchange_db.subscriptions(telegram_id, site_id, tags) values (%s, %s, %s)
         """, (update.effective_chat.id, site_list[site], json.dumps(tag_base)))
         connect.commit()
+        context.bot.send_message(text="Subscription added",
+                                 chat_id=update.effective_chat.id)
     elif len(site) == 0:
         context.bot.send_message(text="Empty site name",
                                  chat_id=update.effective_chat.id)
@@ -372,6 +377,9 @@ def main():
 
     r = request_sites()
     set_sites(r)
+
+    for i in config.admin_list:
+        dispatcher.bot.send_message(text="Bot started", chat_id=i)
 
     while is_running:
         try:
