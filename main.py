@@ -21,6 +21,7 @@ global conn
 global site_list
 global handler_log
 global config
+global is_running
 
 
 def set_connect(config: Config):
@@ -126,6 +127,38 @@ def subs_list(update: Update, context: CallbackContext):
             msg = ""
     context.bot.send_message(text=msg,
                              chat_id=update.effective_chat.id)
+
+
+def admin_stats(update: Update, context: CallbackContext):
+    global handler_log
+    global config
+    if update.effective_chat.id in config.admin_list:
+        handler_log.debug("Received admin_stats from user {}".format(update.effective_chat.id))
+    else:
+        handler_log.critical("Received illegal admin_stats from user {}".format(update.effective_chat.id))
+        return
+    connect = get_connect()
+    cur = connect.cursor()
+    cur.execute("""select count(1), st.api_site_parameter from stackexchange_db.subscriptions s join stackexchange_db.sites st
+    on st.id = s.site_id group by st.api_site_parameter""")
+    msg = ""
+    for cnt, nm in cur:
+        msg += "site: {}, subs: {}".format(nm, cnt) + chr(10)
+    context.bot.send_message(text=msg, chat_id=update.effective_chat.id)
+
+
+def admin_shutdown(update: Update, context: CallbackContext):
+    global handler_log
+    global config
+    global is_running
+    if update.effective_chat.id in config.admin_list:
+        handler_log.debug("Received admin_shutdown from user {}".format(update.effective_chat.id))
+    else:
+        handler_log.critical("Received illegal admin_shutdown from user {}".format(update.effective_chat.id))
+        return
+    is_running = False
+    context.bot.send_message(text="Shutdown started", chat_id=update.effective_chat.id)
+    context.bot.close()
 
 
 def delete_sub(update: Update, context: CallbackContext):
@@ -293,6 +326,7 @@ def clear_tags(list_with_q: List) -> List:
 def main():
     global handler_log
     global config
+    global is_running
     parser = argparse.ArgumentParser(description='Idle RPG server.')
     parser.add_argument("--config", '-cfg', help="Path to config file", action="store", default="cfg//main.json")
     parser.add_argument("--delay", help="Number seconds app will wait before start", action="store", default=None)
@@ -317,6 +351,8 @@ def main():
     other_handler = CommandHandler('other', other_bots)
     help_handler = CommandHandler('help', help_response)
     sources_handler = CommandHandler('sources', sources)
+    shutdown_handler = CommandHandler('admin_shutdown', admin_shutdown)
+    stats_handler = CommandHandler('admin_stats', admin_stats)
     echo_handler = MessageHandler(Filters.text & (~Filters.command), echo)
     dispatcher.add_handler(start_handler)
     dispatcher.add_handler(add_handler)
@@ -326,6 +362,8 @@ def main():
     dispatcher.add_handler(other_handler)
     dispatcher.add_handler(help_handler)
     dispatcher.add_handler(sources_handler)
+    dispatcher.add_handler(shutdown_handler)
+    dispatcher.add_handler(stats_handler)
     dispatcher.add_handler(echo_handler)
 
     updater.start_polling()
