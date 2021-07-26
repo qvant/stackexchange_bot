@@ -1,4 +1,4 @@
-from typing import Union, List
+from typing import List
 
 
 class Question:
@@ -10,4 +10,5 @@ class Question:
         self.tags = tags
 
     def __str__(self):
-        return "title: {}, link: {}, question_id: {}, tags: {}".format(self.title, self.link, self.question_id, self.tags)
+        return "title: {}, link: {}, question_id: {}, tags: {}".format(self.title, self.link, self.question_id,
+                                                                       self.tags)

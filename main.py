@@ -17,6 +17,11 @@ from lib.question import Question
 MAX_TRIES = 3
 WAIT_BETWEEN_TRIES = 3
 
+MODE_EMPTY = 0
+MODE_TAGS = 1
+MODE_TAGS_ALL = 2
+MODE_TAGS_EXCLUDE = 2
+
 global conn
 global site_list
 global handler_log
@@ -24,10 +29,10 @@ global config
 global is_running
 
 
-def set_connect(config: Config):
+def set_connect(cfg: Config):
     global conn
-    conn = psycopg2.connect(dbname=config.db_name, user=config.db_user,
-                            password=config.db_password, host=config.db_host, port=config.db_port)
+    conn = psycopg2.connect(dbname=cfg.db_name, user=cfg.db_user,
+                            password=cfg.db_password, host=cfg.db_host, port=cfg.db_port)
     return conn
 
 
@@ -169,7 +174,7 @@ def delete_sub(update: Update, context: CallbackContext):
     connect = get_connect()
     cur = connect.cursor()
     cmd = update.message.text[5:]
-    handler_log.debug("Received delete cmd for row {} and user".format(cmd, update.effective_chat.id))
+    handler_log.debug("Received delete cmd for row {} and user{}".format(cmd, update.effective_chat.id))
     if cmd == "all":
         cur.execute("""delete from stackexchange_db.subscriptions s
                  where s.telegram_id = %s
@@ -179,7 +184,9 @@ def delete_sub(update: Update, context: CallbackContext):
         try:
             rn = int(cmd)
         except ValueError as err:
-            handler_log.debug("Subscription for row {} and user not deleted: {}".format(cmd, update.effective_chat.id, err))
+            handler_log.debug("Subscription for row {} and user {} not deleted: {}".format(cmd,
+                                                                                           update.effective_chat.id,
+                                                                                           err))
             context.bot.send_message(text="Incorrect number",
                                      chat_id=update.effective_chat.id)
             return
@@ -204,7 +211,7 @@ def delete_sub(update: Update, context: CallbackContext):
                                sq.rn = %s)
                         """, (update.effective_chat.id, rn))
         connect.commit()
-    handler_log.debug("Subscription for row {} and user deleted".format(cmd, update.effective_chat.id))
+    handler_log.debug("Subscription for row {} and user {} deleted".format(cmd, update.effective_chat.id))
     context.bot.send_message(text="Subscription deleted",
                              chat_id=update.effective_chat.id)
 
@@ -212,10 +219,6 @@ def delete_sub(update: Update, context: CallbackContext):
 def add(update: Update, context: CallbackContext):
     global site_list
     args = update.message.text.split(' ')
-    MODE_EMPTY = 0
-    MODE_TAGS = 1
-    MODE_TAGS_ALL = 2
-    MODE_TAGS_EXCLUDE = 2
     mode = MODE_EMPTY
     site = "stackoverflow"
     tags = []
@@ -285,7 +288,7 @@ def echo(update: Update, context: CallbackContext):
 def request_questions(site: str, from_date: int) -> List[Question]:
     cnt = 0
     base_url = "https://api.stackexchange.com/2.3/questions/unanswered"
-    url = "{0}?order=desc&sort=activity&site={1}&fromdate=".format(base_url, site, from_date)
+    url = "{0}?order=desc&sort=activity&site={1}&fromdate={2}".format(base_url, site, from_date)
     while True:
         r = requests.get(url)
         if r.status_code == 200 or cnt >= MAX_TRIES:
