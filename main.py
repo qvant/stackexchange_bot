@@ -296,10 +296,11 @@ def request_questions(site: str, from_date: int) -> List[Question]:
         time.sleep(WAIT_BETWEEN_TRIES)
     obj = r.json().get("items")
     res = []
-    for i in obj:
-        res.append(Question(title=i.get("title"), link=i.get("link"), question_id=i.get("question_id"),
-                            creation_date=i.get("creation_date"),
-                            tags=i.get("tags")))
+    if r.status_code == 200:
+        for i in obj:
+            res.append(Question(title=i.get("title"), link=i.get("link"), question_id=i.get("question_id"),
+                                creation_date=i.get("creation_date"),
+                                tags=i.get("tags")))
     return res
 
 
@@ -314,9 +315,11 @@ def request_sites():
         cnt += 1
         time.sleep(WAIT_BETWEEN_TRIES)
     obj = r.json().get("items")
+
     res = []
-    for i in obj:
-        res.append(i.get("api_site_parameter"))
+    if r.status_code == 200:
+        for i in obj:
+            res.append(i.get("api_site_parameter"))
     return res
 
 
@@ -425,12 +428,19 @@ def main():
                     time_border = i[2] - 5000
                 main_log.info("Time border {}".format(time_border))
                 questions = request_questions(i[3], time_border)
+                if len(questions) == 0:
+                    main_log.info("Empty questions list")
+                    cur.execute("""update stackexchange_db.site_updates u set update_status_id = 1, dt_next_update = %s
+                                                    where u.id = %s""",
+                                (dt_next_update, i[0]))
+                    connect.commit()
+                    continue
                 main_log.info("Get {} questions".format(len(questions)))
                 cur.execute("""select s.telegram_id, tags from stackexchange_db.subscriptions s where s.site_id = %s
                 order by telegram_id""",
                             (i[4],))
-                max_question_id = None
-                max_question_time = None
+                max_question_id = i[1]
+                max_question_time = i[2]
                 for q in questions:
                     if max_question_id is None or max_question_id < q.question_id:
                         max_question_id = q.question_id
