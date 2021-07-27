@@ -16,7 +16,6 @@ CONFIG_PARAM_DB_PASSWORD = "DB_PASSWORD"
 CONFIG_PARAM_NEW_PATH = "CONFIG_PATH"
 CONFIG_PARAM_CONFIG_RELOAD_TIME = "CONFIG_RELOAD_TIME"
 CONFIG_PARAM_SERVER_NAME = "SERVER_NAME"
-CONFIG_PARAM_UPDATE_INTERVAL = "UPDATE_INTERVAL"
 CONFIG_PARAM_HALT_ON_ERRORS = "HALT_ON_ERRORS"
 CONFIG_PARAM_BOT_SECRET = "BOT_SECRET"
 CONFIG_PARAM_ADMIN_LIST = "ADMIN_ACCOUNTS"
@@ -42,7 +41,6 @@ class Config:
         self.logger.setLevel(self.log_level)
         self.server_name = config.get(CONFIG_PARAM_SERVER_NAME)
         self.supress_errors = False
-        self.update_interval = int(config.get(CONFIG_PARAM_UPDATE_INTERVAL))
         if not config.get(CONFIG_PARAM_HALT_ON_ERRORS):
             self.supress_errors = True
         self.secret = config.get(CONFIG_PARAM_BOT_SECRET)
