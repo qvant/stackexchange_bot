@@ -483,7 +483,7 @@ def main():
                         sent = False
                         cur_id = None
                         # skip already proceed questions
-                        if q.question_id < i[1]:
+                        if i[1] is not None and q.question_id < i[1]:
                             continue
                         for s in subs:
                             if sent and s[0] == cur_id:
