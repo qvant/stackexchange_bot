@@ -25,6 +25,7 @@ MODE_TAGS_EXCLUDE = 2
 global conn
 global site_list
 global handler_log
+global api_log
 global config
 global is_running
 
@@ -59,6 +60,8 @@ def set_sites(sites):
 
 
 def other_bots(update: Update, context: CallbackContext):
+    global handler_log
+    handler_log.info("Received other_bots command from user {}".format(update.effective_chat.id))
     context.bot.send_message(chat_id=update.effective_chat.id,
                              text="You can may be interested in my other telegram bots: "
                                   " https://t.me/idle_rpg_bot - simple ZPG"
@@ -66,16 +69,22 @@ def other_bots(update: Update, context: CallbackContext):
 
 
 def start(update: Update, context: CallbackContext):
+    global handler_log
+    handler_log.info("Received start command from user {}".format(update.effective_chat.id))
     help_response(update, context)
 
 
 def sources(update: Update, context: CallbackContext):
+    global handler_log
+    handler_log.info("Received sources command from user {}".format(update.effective_chat.id))
     msg = "Bot sources available on https://github.com/qvant/stackexchange_bot."
     context.bot.send_message(text=msg,
                              chat_id=update.effective_chat.id)
 
 
 def help_response(update: Update, context: CallbackContext):
+    global handler_log
+    handler_log.info("Received help command from user {}".format(update.effective_chat.id))
     msg = "The bot supports following commands:" + chr(10)
     msg += "  /add - add subscription for the site from stackexchange network."
     msg += "  It has parameters:" + chr(10)
@@ -104,6 +113,8 @@ def help_response(update: Update, context: CallbackContext):
 
 def site_list_handler(update: Update, context: CallbackContext):
     global site_list
+    global handler_log
+    handler_log.info("Received list command from user {}".format(update.effective_chat.id))
     msg = "Stackexchange sites supported: " + chr(10)
     for i in site_list:
         msg += str(i) + "," + chr(10)
@@ -117,6 +128,8 @@ def site_list_handler(update: Update, context: CallbackContext):
 
 
 def subs_list(update: Update, context: CallbackContext):
+    global handler_log
+    handler_log.info("Received list command from user {}".format(update.effective_chat.id))
     connect = get_connect()
     cur = connect.cursor()
     cur.execute("""select st.api_site_parameter, row_number() over (order by s.id) rn, tags
@@ -217,6 +230,8 @@ def delete_sub(update: Update, context: CallbackContext):
 
 def add(update: Update, context: CallbackContext):
     global site_list
+    global handler_log
+    handler_log.info("Received add command from user {}".format(update.effective_chat.id))
     args = update.message.text.split(' ')
     mode = MODE_EMPTY
     site = "stackoverflow"
@@ -285,11 +300,14 @@ def echo(update: Update, context: CallbackContext):
 
 
 def request_questions(site: str, from_date: int) -> List[Question]:
+    global api_log
     cnt = 0
     base_url = "https://api.stackexchange.com/2.3/questions/unanswered"
     url = "{0}?order=desc&sort=activity&site={1}&fromdate={2}".format(base_url, site, from_date)
     while True:
         r = requests.get(url)
+        api_log.info("Answer on {} is {}".format(base_url, r.status_code))
+        api_log.debug("Full response on {} is {}".format(base_url, r.text))
         if r.status_code == 200 or cnt >= MAX_TRIES:
             break
         cnt += 1
@@ -310,6 +328,8 @@ def request_sites():
     url = base_url
     while True:
         r = requests.get(url)
+        api_log.info("Answer on {} is {}".format(base_url, r.status_code))
+        api_log.debug("Full response on {} is {}".format(base_url, r.text))
         if r.status_code == 200 or cnt >= MAX_TRIES:
             break
         cnt += 1
@@ -328,6 +348,8 @@ def clear_tags(list_with_q: List) -> List:
     for i in list_with_q:
         if i[0] == "'":
             res.append(i[1:len(i) - 1])
+        elif i[0] == '"':
+            res.append(i[1:len(i) - 1])
         else:
             res.append(i)
     return res
@@ -335,6 +357,7 @@ def clear_tags(list_with_q: List) -> List:
 
 def main():
     global handler_log
+    global api_log
     global config
     global is_running
     global site_list
@@ -350,6 +373,7 @@ def main():
     config = Config(args.config)
     main_log = get_logger("main_bot", config.log_level, True)
     handler_log = get_logger("handler", config.log_level, True)
+    api_log = get_logger("api", config.log_level, True)
 
     set_connect(config)
 
