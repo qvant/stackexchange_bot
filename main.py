@@ -428,7 +428,7 @@ def main():
                 set_sites(r)
             connect = get_connect()
             cur = connect.cursor()
-            dt_next_update = datetime.datetime.now() + datetime.timedelta(minutes=5)
+            dt_next_update = datetime.datetime.now() + datetime.timedelta(minutes=15)
             cur.execute("select u.id, u.last_question_id, u.last_question_time, st.api_site_parameter, st.id"
                         "  from stackexchange_db.site_updates u"
                         "  right join stackexchange_db.sites st on st.id = u.site_id"
