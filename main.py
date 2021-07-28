@@ -13,6 +13,7 @@ from telegram.update import Update
 from lib.config import Config
 from lib.log import get_logger
 from lib.question import Question
+from lib.stats import set_startup, get_stats
 
 MAX_TRIES = 3
 WAIT_BETWEEN_TRIES = 3
@@ -162,6 +163,9 @@ def admin_stats(update: Update, context: CallbackContext):
                         join stackexchange_db.sites st
                         on st.id = s.site_id group by st.api_site_parameter""")
     msg = ""
+    stats = get_stats()
+    for i in stats:
+        msg += "{}: {}".format(i, stats[i]) + chr(10)
     for cnt, nm in cur:
         msg += "site: {}, subs: {}".format(nm, cnt) + chr(10)
     context.bot.send_message(text=msg, chat_id=update.effective_chat.id)
@@ -411,6 +415,7 @@ def main():
     r = request_sites()
     set_sites(r)
 
+    set_startup()
     for i in config.admin_list:
         dispatcher.bot.send_message(text="Bot started", chat_id=i)
 
