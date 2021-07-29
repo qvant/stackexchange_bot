@@ -314,6 +314,10 @@ def request_questions(site: str, from_date: int) -> List[Question]:
         api_log.debug("Full response on {} is {}".format(base_url, r.text))
         if r.status_code == 200 or cnt >= MAX_TRIES:
             break
+        if r.status_code == 400:
+            api_log.info("Sleep because {}".format(r.text))
+            time.sleep(3600)
+            api_log.info("End sleep because {}".format(r.text))
         cnt += 1
         time.sleep(WAIT_BETWEEN_TRIES)
     obj = r.json().get("items")
