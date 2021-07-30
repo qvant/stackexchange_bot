@@ -469,7 +469,7 @@ def main():
                 if i[2] is None:
                     time_border = int((datetime.datetime.now() - datetime.timedelta(hours=1)).timestamp())
                 else:
-                    time_border = i[2] - 5000
+                    time_border = i[2] - 5
                 main_log.info("Time border {}".format(time_border))
                 questions = request_questions(i[3], time_border)
                 if len(questions) == 0:
