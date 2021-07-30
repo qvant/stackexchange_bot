@@ -587,6 +587,7 @@ def main():
         except BaseException as err:
             main_log.exception(err)
             if config.supress_errors:
+                time.sleep(60)
                 pass
             else:
                 raise
