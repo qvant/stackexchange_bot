@@ -459,6 +459,7 @@ def main():
                     time_border = int((datetime.datetime.now() - datetime.timedelta(hours=1)).timestamp())
                 else:
                     time_border = i[2] - 5000
+                
                 main_log.info("Time border {}".format(time_border))
                 questions = request_questions(i[3], time_border)
                 if len(questions) == 0:
@@ -487,7 +488,7 @@ def main():
                         sent = False
                         cur_id = None
                         # skip already proceed questions
-                        if i[1] is not None and q.question_id < i[1]:
+                        if i[1] is not None and q.question_id <= i[1]:
                             continue
                         for s in subs:
                             if sent and s[0] == cur_id:
