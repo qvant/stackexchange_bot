@@ -18,6 +18,8 @@ from lib.stats import set_startup, get_stats
 MAX_TRIES = 3
 WAIT_BETWEEN_TRIES = 3
 
+PAGE_SIZE = 100 # Max valid value
+
 MODE_EMPTY = 0
 MODE_TAGS = 1
 MODE_TAGS_ALL = 2
@@ -305,28 +307,37 @@ def echo(update: Update, context: CallbackContext):
 
 def request_questions(site: str, from_date: int) -> List[Question]:
     global api_log
+    res = []
     cnt = 0
     base_url = "https://api.stackexchange.com/2.3/questions/unanswered"
-    url = "{0}?order=desc&sort=activity&site={1}&fromdate={2}".format(base_url, site, from_date)
-    while True:
-        r = requests.get(url)
-        api_log.info("Answer on {} is {}".format(base_url, r.status_code))
-        api_log.debug("Full response on {} is {}".format(base_url, r.text))
-        if r.status_code == 200 or cnt >= MAX_TRIES:
-            break
-        if r.status_code == 400:
-            api_log.info("Sleep because {}".format(r.text))
-            time.sleep(3600)
-            api_log.info("End sleep because {}".format(r.text))
-        cnt += 1
-        time.sleep(WAIT_BETWEEN_TRIES)
-    obj = r.json().get("items")
-    res = []
-    if r.status_code == 200:
-        for i in obj:
-            res.append(Question(title=i.get("title"), link=i.get("link"), question_id=i.get("question_id"),
-                                creation_date=i.get("creation_date"),
-                                tags=i.get("tags")))
+    page = 1
+    need_request = True
+    while need_request:
+        url = "{0}?order=desc&sort=activity&site={1}&fromdate={2}&pagesize={3}&page={4}".format(base_url, site,
+                                                                                                from_date,
+                                                                                                PAGE_SIZE, page)
+        while True:
+            r = requests.get(url)
+            api_log.info("Answer on {} is {}".format(base_url, r.status_code))
+            api_log.debug("Full response on {} is {}".format(base_url, r.text))
+            if r.status_code == 200 or cnt >= MAX_TRIES:
+                break
+            if r.status_code == 400:
+                api_log.info("Sleep because {}".format(r.text))
+                time.sleep(5)
+                api_log.info("End sleep because {}".format(r.text))
+            cnt += 1
+            time.sleep(WAIT_BETWEEN_TRIES)
+        obj = r.json().get("items")
+        if r.status_code == 200:
+            for i in obj:
+                res.append(Question(title=i.get("title"), link=i.get("link"), question_id=i.get("question_id"),
+                                    creation_date=i.get("creation_date"),
+                                    tags=i.get("tags")))
+        need_request = r.json().get("has_more")
+        page += 1
+        api_log.info("Need to request more: {}, next page: {}, page size {}".format(need_request, page, PAGE_SIZE))
+
     return res
 
 
@@ -459,7 +470,6 @@ def main():
                     time_border = int((datetime.datetime.now() - datetime.timedelta(hours=1)).timestamp())
                 else:
                     time_border = i[2] - 5000
-                
                 main_log.info("Time border {}".format(time_border))
                 questions = request_questions(i[3], time_border)
                 if len(questions) == 0:
@@ -542,7 +552,7 @@ def main():
                                 queued_msgs[s[0]] = []
                             queued_msgs[s[0]].append(q)
                             sent = True
-                    main_log.info("Proceed {} subscriptions".format(len(subs)))
+                    main_log.info("Proceed {} subscriptions and {} questions".format(len(subs), len(questions)))
                     for usr in queued_msgs:
                         msg = ""
                         for q in queued_msgs[usr]:
