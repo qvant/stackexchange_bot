@@ -1,0 +1,1 @@
+Bot was created to send notifications about new unasnsered questions on the stackexchange network (mostly stackoverflow of course). You can check it in action on https://t.me/stackexchange_notifier_bot
