@@ -18,7 +18,7 @@ from lib.stats import set_startup, get_stats
 MAX_TRIES = 3
 WAIT_BETWEEN_TRIES = 3
 
-PAGE_SIZE = 100 # Max valid value
+PAGE_SIZE = 100  # Max valid value
 
 MODE_EMPTY = 0
 MODE_TAGS = 1
@@ -593,13 +593,17 @@ def main():
                     set_connect(config)
                 except BaseException as err:
                     main_log.exception(err)
+                    time.sleep(5)
             else:
                 raise
         except BaseException as err:
             main_log.exception(err)
             if config.supress_errors:
                 time.sleep(60)
-                pass
+                try:
+                    set_connect(config)
+                except BaseException as err:
+                    main_log.exception(err)
             else:
                 raise
     updater.stop()
