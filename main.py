@@ -328,12 +328,14 @@ def request_questions(site: str, from_date: int) -> List[Question]:
                 api_log.info("End sleep because {}".format(r.text))
             cnt += 1
             time.sleep(WAIT_BETWEEN_TRIES)
-        obj = r.json().get("items")
         if r.status_code == 200:
+            obj = r.json().get("items")
             for i in obj:
                 res.append(Question(title=i.get("title"), link=i.get("link"), question_id=i.get("question_id"),
                                     creation_date=i.get("creation_date"),
                                     tags=i.get("tags")))
+        else:
+            raise ValueError("Incorrect response {} {} from {}" .format(r.status_code, r.text, url))
         need_request = r.json().get("has_more")
         page += 1
         api_log.info("Need to request more: {}, next page: {}, page size {}".format(need_request, page, PAGE_SIZE))
