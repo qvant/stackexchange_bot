@@ -468,7 +468,7 @@ def main():
                 where u.id = %s""",
                             (i[0],))
                 connect.commit()
-                main_log.info("Started update site {} {}".format(i[4], i[0]))
+                main_log.info("Started update site with site_id {} update_id {} and name {}".format(i[4], i[0], i[3]))
                 if i[2] is None:
                     time_border = int((datetime.datetime.now() - datetime.timedelta(hours=1)).timestamp())
                 else:
