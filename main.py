@@ -317,6 +317,7 @@ def request_questions(site: str, from_date: int) -> List[Question]:
                                                                                                 from_date,
                                                                                                 PAGE_SIZE, page)
         while True:
+            api_log.info("Sending request {}".format(base_url))
             r = requests.get(url)
             api_log.info("Answer on {} is {}".format(base_url, r.status_code))
             api_log.debug("Full response on {} is {}".format(base_url, r.text))
@@ -481,7 +482,8 @@ def main():
                                 (dt_next_update, i[0]))
                     connect.commit()
                     continue
-                main_log.info("Get {} questions".format(len(questions)))
+                else:
+                    main_log.info("Get {} questions".format(len(questions)))
                 cur.execute("""select s.telegram_id, tags from stackexchange_db.subscriptions s where s.site_id = %s
                 order by telegram_id""",
                             (i[4],))
