@@ -9,6 +9,7 @@ from typing import List
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 from telegram.ext.callbackcontext import CallbackContext
 from telegram.update import Update
+from telegram.error import Unauthorized
 
 from lib.config import Config
 from lib.log import get_logger
@@ -571,8 +572,16 @@ def main():
                                     main_log.info("Sent {} messages, sleep".format(msg_cnt))
                             else:
                                 msg += buf
-                        dispatcher.bot.send_message(chat_id=usr,
-                                                    text=msg)
+                        try:
+                            dispatcher.bot.send_message(chat_id=usr,
+                                                        text=msg)
+                        except Unauthorized as err:
+                            main_log.exception(err)
+                            main_log.info("Delete subscriptions for user {} because he blocked us ".format(usr))
+                            cur.execute("""delete from stackexchange_db.subscriptions where telegram_id = %s""",
+                                        (usr,))
+                            main_log.info("Deleted subscriptions for user {} ".format(usr))
+                            connect.commit()
                         msg_cnt += 1
                         if msg_cnt % 30 == 0:
                             time.sleep(1)
