@@ -594,7 +594,8 @@ def main():
                                 last_question_id = %s, last_question_time=%s
                                 where u.id = %s""",
                             (dt_next_update, max_question_id, max_question_time, i[0]))
-                connect.commit()
+            # close transaction, even if no changes (still open and stay in idle)
+            connect.commit()
 
             main_log.info("Sleep...")
             time.sleep(4)
