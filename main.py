@@ -319,12 +319,24 @@ def request_questions(site: str, from_date: int) -> List[Question]:
                                                                                                 PAGE_SIZE, page)
         while True:
             api_log.info("Sending request {}".format(base_url))
-            r = requests.get(url)
+            try:
+                r = requests.get(url, timeout=30)
+                if r.status_code == 200:
+                    cnt = 0
+            except BaseException as err:
+                api_log.exception(err)
+                api_log.info("Sleep because error")
+                time.sleep(5)
+                api_log.info("End sleep because error")
+                cnt += 1
+                if cnt >= MAX_TRIES:
+                    break
+                continue
             api_log.info("Answer on {} is {}".format(base_url, r.status_code))
             api_log.debug("Full response on {} is {}".format(base_url, r.text))
             if r.status_code == 200 or cnt >= MAX_TRIES:
                 break
-            if r.status_code == 400:
+            if r.status_code in [400, 403]:
                 api_log.info("Sleep because {}".format(r.text))
                 time.sleep(5)
                 api_log.info("End sleep because {}".format(r.text))
@@ -332,13 +344,17 @@ def request_questions(site: str, from_date: int) -> List[Question]:
             time.sleep(WAIT_BETWEEN_TRIES)
         if r.status_code == 200:
             obj = r.json().get("items")
+            if cnt >= MAX_TRIES:
+                need_request = False
+            else:
+                need_request = r.json().get("has_more")
             for i in obj:
                 res.append(Question(title=i.get("title"), link=i.get("link"), question_id=i.get("question_id"),
                                     creation_date=i.get("creation_date"),
                                     tags=i.get("tags")))
         else:
-            raise ValueError("Incorrect response {} {} from {}" .format(r.status_code, r.text, url))
-        need_request = r.json().get("has_more")
+            api_log.error("Incorrect response {} {} from {}" .format(r.status_code, r.text, url))
+            need_request = False
         page += 1
         api_log.info("Need to request more: {}, next page: {}, page size {}".format(need_request, page, PAGE_SIZE))
 
